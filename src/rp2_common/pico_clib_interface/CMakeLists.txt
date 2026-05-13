@@ -21,6 +21,10 @@ if (NOT TARGET pico_clib_interface)
     #            PICO_STDIO_SHORT_CIRCUIT_CLIB_FUNCS=0
     #)
 
+    target_include_directories(pico_picolibc_interface SYSTEM INTERFACE
+            ${CMAKE_CURRENT_LIST_DIR}/include/picolibc
+    )
+    
     #  ---- llvm_libc ----
     pico_add_library(pico_llvm_libc_interface)
 
@@ -38,6 +42,24 @@ if (NOT TARGET pico_clib_interface)
         # PICO_CMAKE_CONFIG: PICO_CLIB, The C library to use e.g. newlib/picolibc/llvm_libc, type=string, default=based on PICO_COMPILER, group=build, docref=cmake-toolchain-config
         set(PICO_CLIB newlib)
     endif()
+    
+    if(PICO_CLIB STREQUAL "newlib")
+        execute_process(
+            COMMAND ${PICO_COMPILER_CC} -print-file-name=nano.specs
+            OUTPUT_VARIABLE PICOLIBC_SPECS_PATH
+            OUTPUT_STRIP_TRAILING_WHITESPACE
+        )
+
+        # nano.specs exists if gcc/clang returns a complete path -> newlib exists
+        if(EXISTS "${PICOLIBC_SPECS_PATH}")
+            set(PICO_CLIB "newlib")
+        else()
+            # otherwise give picolibc a try
+            set(PICO_CLIB "picolibc")
+        endif()
+    endif()
+    
+    message("*********** ${PICO_CLIB} ${PICO_COMPILER_CC}")
 
     target_link_libraries(pico_clib_interface INTERFACE pico_${PICO_CLIB}_interface)
 endif()
