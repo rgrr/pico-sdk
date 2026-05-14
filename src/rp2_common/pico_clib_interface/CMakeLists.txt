@@ -39,27 +39,23 @@ if (NOT TARGET pico_clib_interface)
     pico_mirrored_target_link_libraries(pico_llvm_libc_interface INTERFACE pico_stdio)
 
     if (NOT PICO_CLIB)
-        # PICO_CMAKE_CONFIG: PICO_CLIB, The C library to use e.g. newlib/picolibc/llvm_libc, type=string, default=based on PICO_COMPILER, group=build, docref=cmake-toolchain-config
-        set(PICO_CLIB newlib)
-    endif()
+        # if no PICO_CLIB specified check for gcc existance of either newlib or picolibc 
+        if(PICO_COMPILER_CC MATCHES "gcc$")
+            execute_process(
+                COMMAND ${PICO_COMPILER_CC} -print-file-name=nano.specs
+                OUTPUT_VARIABLE PICOLIBC_SPECS_PATH
+                OUTPUT_STRIP_TRAILING_WHITESPACE
+            )
     
-    if(PICO_CLIB STREQUAL "newlib")
-        execute_process(
-            COMMAND ${PICO_COMPILER_CC} -print-file-name=nano.specs
-            OUTPUT_VARIABLE PICOLIBC_SPECS_PATH
-            OUTPUT_STRIP_TRAILING_WHITESPACE
-        )
-
-        # nano.specs exists if gcc/clang returns a complete path -> newlib exists
-        if(EXISTS "${PICOLIBC_SPECS_PATH}")
-            set(PICO_CLIB "newlib")
-        else()
-            # otherwise give picolibc a try
-            set(PICO_CLIB "picolibc")
+            # nano.specs exists if gcc/clang returns a complete path -> newlib exists
+            if(EXISTS "${PICOLIBC_SPECS_PATH}")
+                set(PICO_CLIB "newlib")
+            else()
+                # otherwise give picolibc a try
+                set(PICO_CLIB "picolibc")
+            endif()
         endif()
-    endif()
+    endif()    
     
-    message("*********** ${PICO_CLIB} ${PICO_COMPILER_CC}")
-
     target_link_libraries(pico_clib_interface INTERFACE pico_${PICO_CLIB}_interface)
 endif()
